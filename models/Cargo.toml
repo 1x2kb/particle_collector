@@ -1,0 +1,12 @@
+[package]
+name = "models"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+diesel = "2.1.0"
+rust_decimal = { version = "1.30.0", features = ["db-diesel2-postgres"] }
+serde = { version = "1.0.164", features = ["serde_derive"] }
+serde_json = "1.0.99"
