@@ -1,5 +1,6 @@
 pub mod schema;
 
+use chrono::prelude::*;
 use diesel::{Insertable, Queryable, Selectable};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -42,4 +43,5 @@ pub struct ParticleCount {
     micro_meter_60: Decimal,
     micro_meter_180: Decimal,
     micro_meter_500: Decimal,
+    insert_time: DateTime<Utc>,
 }

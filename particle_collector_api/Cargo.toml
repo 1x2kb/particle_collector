@@ -11,7 +11,7 @@ path = "src/particles.rs"
 
 [dependencies]
 axum = "0.6.18"
-diesel = { version = "2.1.0", features = ["postgres"] }
+diesel = { version = "2.1.0", features = ["postgres", "chrono"] }
 dotenvy = "0.15.7"
 tokio = { version = "1.28.2", features = ["full"] }
 models = { path = "../models" }

@@ -1,20 +1,34 @@
-use std::error::Error;
 use std::str::FromStr;
 
 use iced::widget::{button, column, row, text, text_input};
 use iced::{executor, Alignment, Application, Command, Element, Settings};
 use models::{NewParticleCount, ParticleCount};
+use reqwest::Client;
 use rust_decimal::Decimal;
 
-use reqwest::blocking::Client;
-
-pub fn main() -> iced::Result {
-    ParticleUI::run(Settings::default())
+#[derive(Debug, Clone)]
+enum DisplayError {
+    Serde(String),
+    Reqwest(String),
+    RustDecimal(String),
 }
 
-enum DisplayError {
-    Serde(serde_json::Error),
-    Reqwest(reqwest::Error),
+impl From<reqwest::Error> for DisplayError {
+    fn from(value: reqwest::Error) -> Self {
+        Self::Reqwest(value.to_string())
+    }
+}
+
+impl From<serde_json::Error> for DisplayError {
+    fn from(value: serde_json::Error) -> Self {
+        Self::Serde(value.to_string())
+    }
+}
+
+impl From<rust_decimal::Error> for DisplayError {
+    fn from(value: rust_decimal::Error) -> Self {
+        Self::RustDecimal(value.to_string())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -37,6 +51,8 @@ struct NewParticle {
 struct ParticleUI {
     new_particle: NewParticle,
     particles: Vec<ParticleCount>,
+    particle: Option<ParticleCount>,
+    error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -44,8 +60,9 @@ enum Message {
     Loading,
     DisplayData(Vec<ParticleCount>),
     Submit,
+    SuccessfulWrite(Option<ParticleCount>),
     TextChanged(Control),
-    DisplayError,
+    Error(Option<DisplayError>),
 }
 
 impl Application for ParticleUI {
@@ -77,6 +94,12 @@ impl Application for ParticleUI {
                 Command::none()
             }
             Message::Submit => handle_submit(&self.new_particle),
+            Message::SuccessfulWrite(particle_count) => {
+                println!("Ran Message::SuccessfulWrite");
+                self.particle = particle_count;
+                self.error = None;
+                Command::none()
+            }
             Message::TextChanged(control) => {
                 match control {
                     Control::MicroMeter10(mm10) => self.new_particle.micro_meter_10 = mm10,
@@ -86,7 +109,16 @@ impl Application for ParticleUI {
                 }
                 Command::none()
             }
-            Message::DisplayError => Command::none(),
+            Message::Error(display_error) => {
+                println!("Ran Message::Error");
+                self.particle = None;
+                self.error = display_error.map(|error| match error {
+                    DisplayError::Serde(error) => error,
+                    DisplayError::Reqwest(error) => error,
+                    DisplayError::RustDecimal(error) => error,
+                });
+                Command::none()
+            }
         }
     }
 
@@ -96,22 +128,34 @@ impl Application for ParticleUI {
                 text("Enter micro meters >10"),
                 text_input("10 micrometer", &self.new_particle.micro_meter_10)
                     .on_input(|message| Message::TextChanged(Control::MicroMeter10(message)))
-            ],
+            ]
+            .align_items(Alignment::Center),
             row![
                 text("Enter micro meter >60"),
                 text_input("60 micro meter", &self.new_particle.micro_meter_60)
                     .on_input(|message| Message::TextChanged(Control::MicroMeter60(message)))
-            ],
+            ]
+            .align_items(Alignment::Center),
             row![
                 text("Enter micro meter >180"),
                 text_input("180 micro meter", &self.new_particle.micro_meter_180)
                     .on_input(|message| Message::TextChanged(Control::MicroMeter180(message)))
-            ],
+            ]
+            .align_items(Alignment::Center),
             row![
                 text("Enter micro meter >500"),
                 text_input("500 micro meter", &self.new_particle.micro_meter_500)
                     .on_input(|message| Message::TextChanged(Control::MicroMeter500(message)))
             ],
+            row![text(match &self.error {
+                Some(error) => error,
+                None => "",
+            })],
+            row![text(match &self.particle {
+                Some(_) => "Wrote particle",
+                None => "",
+            })]
+            .align_items(Alignment::Center),
             button("Submit").on_press(Message::Submit)
         ]
         .padding(20)
@@ -127,71 +171,80 @@ impl Default for ParticleUI {
                 ..Default::default()
             },
             particles: Vec::default(),
+            particle: None,
+            error: None,
         }
     }
 }
 
 // TODO: make async
 fn begin_loading() -> Command<Message> {
-    let data = reqwest::blocking::get("http://localhost:3000/particle")
-        .map_err(DisplayError::Reqwest)
-        .and_then(|response| response.text().map_err(DisplayError::Reqwest))
-        .and_then(|text| {
-            serde_json::from_str::<Vec<NewParticleCount>>(&text).map_err(DisplayError::Serde)
-        });
-
-    Command::none()
+    Command::perform(get_data(), |data| match data {
+        Ok(d) => Message::DisplayData(d),
+        Err(error) => Message::Error(Some(error)),
+    })
 }
 
-// TODO: Make async
+async fn get_data() -> Result<Vec<ParticleCount>, DisplayError> {
+    match reqwest::get("http://localhost:3000/particle").await {
+        Ok(response) => response
+            .text()
+            .await
+            .map_err(|e| DisplayError::Reqwest(e.to_string()))
+            .and_then(|text| {
+                serde_json::from_str::<Vec<ParticleCount>>(&text)
+                    .map_err(|e| DisplayError::Serde(e.to_string()))
+            }),
+        Err(e) => Err(DisplayError::Reqwest(e.to_string())),
+    }
+}
+
 fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
-    println!("Parsing new particle count data");
-    let new_particle = match to_new_particle_counts(new_particle) {
-        Ok(new_particle) => new_particle,
-        Err(err) => {
-            println!("Error while parsing particle data\n{:#?}", err);
-            return Command::none();
-        }
-    };
-    println!("Successfully parsed new particle data\n{:#?}", new_particle);
-
-    println!("Serializing body");
-    let body = match serde_json::to_string(&new_particle) {
-        Ok(body) => body,
-        Err(error) => {
-            println!("{:#?}", error);
-            return Command::none();
-        }
-    };
-    println!("Succesfully serialized body");
-
-    println!("Sending http request");
-    // Should be async.
-    let text = match Client::new()
-        .post("http://localhost:3000/particle")
-        .body(body)
-        .send()
-    {
-        Ok(response) => match response.text() {
-            Ok(text) => text,
-            Err(e) => {
-                println!("{:#?}", e);
-                return Command::none();
-            }
+    Command::perform(
+        write_data(new_particle.clone()),
+        |write_result| match write_result {
+            Ok(value) => Message::SuccessfulWrite(Some(value)),
+            Err(e) => Message::Error(Some(e)),
         },
-        Err(e) => {
-            println!("{:#?}", e);
-            return Command::none();
-        }
-    };
-    println!("Finished sending request");
-
-    Command::none()
+    )
 }
 
-fn to_new_particle_counts(
-    new_particle: &NewParticle,
-) -> Result<NewParticleCount, rust_decimal::Error> {
+async fn write_data(particle_data: NewParticle) -> Result<ParticleCount, DisplayError> {
+    let new_particle = to_new_particle_counts(&particle_data)?;
+    println!("Successfully converted input into particle type");
+    let new_particle = serde_json::to_string(&new_particle)
+        .map_err(|e| e.to_string())
+        .map_err(DisplayError::Serde)?;
+    println!("Successfully serialized particle type into string");
+
+    Client::new()
+        .post("http://localhost:3000/particle")
+        .body(new_particle)
+        .send()
+        .await
+        .map(|result| {
+            println!("Successfully sent request and received response");
+            result
+        })
+        .map_err(DisplayError::from)?
+        .text()
+        .await
+        .map(|result| {
+            println!("Successfully extracted text from response body");
+            result
+        })
+        .map_err(DisplayError::from)
+        .and_then(|text| {
+            serde_json::from_str(&text)
+                .map(|result| {
+                    println!("Successfully parsed text into particle type");
+                    result
+                })
+                .map_err(DisplayError::from)
+        })
+}
+
+fn to_new_particle_counts(new_particle: &NewParticle) -> Result<NewParticleCount, DisplayError> {
     [
         new_particle.micro_meter_10.as_str(),
         new_particle.micro_meter_60.as_str(),
@@ -207,4 +260,9 @@ fn to_new_particle_counts(
         micro_meter_180: values[2],
         micro_meter_500: values[3],
     })
+    .map_err(|error| DisplayError::RustDecimal(error.to_string()))
+}
+
+pub fn main() -> iced::Result {
+    ParticleUI::run(Settings::default())
 }
