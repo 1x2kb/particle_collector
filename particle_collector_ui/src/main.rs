@@ -58,7 +58,7 @@ struct ParticleUI {
 #[derive(Debug, Clone)]
 enum Message {
     // Loading,
-    DisplayData(Vec<ParticleCount>),
+    // DisplayData(Vec<ParticleCount>),
     Submit,
     SuccessfulWrite(Option<ParticleCount>),
     TextChanged(Control),
@@ -89,10 +89,10 @@ impl Application for ParticleUI {
     fn update(&mut self, message: Message) -> iced::Command<Message> {
         match message {
             // Message::Loading => begin_loading(),
-            Message::DisplayData(particles) => {
-                self.particles = particles;
-                Command::none()
-            }
+            // Message::DisplayData(particles) => {
+            //     self.particles = particles;
+            //     Command::none()
+            // }
             Message::Submit => handle_submit(&self.new_particle),
             Message::SuccessfulWrite(particle_count) => {
                 println!("Ran Message::SuccessfulWrite");
@@ -178,26 +178,26 @@ impl Default for ParticleUI {
 }
 
 // TODO: make async
-fn begin_loading() -> Command<Message> {
-    Command::perform(get_data(), |data| match data {
-        Ok(d) => Message::DisplayData(d),
-        Err(error) => Message::Error(Some(error)),
-    })
-}
+// fn begin_loading() -> Command<Message> {
+//     Command::perform(get_data(), |data| match data {
+//         Ok(d) => Message::DisplayData(d),
+//         Err(error) => Message::Error(Some(error)),
+//     })
+// }
 
-async fn get_data() -> Result<Vec<ParticleCount>, DisplayError> {
-    match reqwest::get("http://localhost:3000/particle").await {
-        Ok(response) => response
-            .text()
-            .await
-            .map_err(|e| DisplayError::Reqwest(e.to_string()))
-            .and_then(|text| {
-                serde_json::from_str::<Vec<ParticleCount>>(&text)
-                    .map_err(|e| DisplayError::Serde(e.to_string()))
-            }),
-        Err(e) => Err(DisplayError::Reqwest(e.to_string())),
-    }
-}
+// async fn get_data() -> Result<Vec<ParticleCount>, DisplayError> {
+//     match reqwest::get("http://localhost:3000/particle").await {
+//         Ok(response) => response
+//             .text()
+//             .await
+//             .map_err(|e| DisplayError::Reqwest(e.to_string()))
+//             .and_then(|text| {
+//                 serde_json::from_str::<Vec<ParticleCount>>(&text)
+//                     .map_err(|e| DisplayError::Serde(e.to_string()))
+//             }),
+//         Err(e) => Err(DisplayError::Reqwest(e.to_string())),
+//     }
+// }
 
 fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
     Command::perform(
