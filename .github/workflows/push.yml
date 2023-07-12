@@ -13,15 +13,6 @@ jobs:
       - run: docker compose up -d
       - run: cargo test --workspace
       - run: docker compose down
-  
-  test-arm64:
-    name: test on arm
-    runs-on: ubuntu-latest
-    architecture: arm64
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo test -p particle_collector_ui
 
   build:
     name: cargo build
