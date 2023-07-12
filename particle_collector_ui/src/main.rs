@@ -50,7 +50,7 @@ struct NewParticle {
 #[derive(Debug, Clone)]
 struct ParticleUI {
     new_particle: NewParticle,
-    particles: Vec<ParticleCount>,
+    // particles: Vec<ParticleCount>,
     particle: Option<ParticleCount>,
     error: Option<String>,
 }
@@ -170,7 +170,7 @@ impl Default for ParticleUI {
             new_particle: NewParticle {
                 ..Default::default()
             },
-            particles: Vec::default(),
+            // particles: Vec::default(),
             particle: None,
             error: None,
         }
