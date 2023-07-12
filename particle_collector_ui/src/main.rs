@@ -57,7 +57,7 @@ struct ParticleUI {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Loading,
+    // Loading,
     DisplayData(Vec<ParticleCount>),
     Submit,
     SuccessfulWrite(Option<ParticleCount>),
@@ -88,7 +88,7 @@ impl Application for ParticleUI {
 
     fn update(&mut self, message: Message) -> iced::Command<Message> {
         match message {
-            Message::Loading => begin_loading(),
+            // Message::Loading => begin_loading(),
             Message::DisplayData(particles) => {
                 self.particles = particles;
                 Command::none()
