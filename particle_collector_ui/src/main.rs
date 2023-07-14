@@ -95,7 +95,6 @@ impl Application for ParticleUI {
             }
             Message::Submit => handle_submit(&self.new_particle),
             Message::SuccessfulWrite(particle_count) => {
-                println!("Ran Message::SuccessfulWrite");
                 self.particle = particle_count;
                 self.error = None;
                 Command::none()
@@ -217,8 +216,10 @@ async fn write_data(particle_data: NewParticle) -> Result<ParticleCount, Display
         .map_err(DisplayError::Serde)?;
     println!("Successfully serialized particle type into string");
 
+    let host = std::env::var("API_HOST").unwrap_or("http://localhost:3000".to_string());
+
     Client::new()
-        .post("http://localhost:3000/particle")
+        .post(format!("{}/particle", host))
         .body(new_particle)
         .send()
         .await
