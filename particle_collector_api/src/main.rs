@@ -16,7 +16,7 @@ async fn main() {
         .route("/particle", get(get_particle_counts))
         .route("/particle", post(insert_particle_count));
 
-    let host = std::env::var("API_HOST").unwrap_or(DEFAULT_HOST.to_string());
+    let host = get_api_host();
 
     println!("Attempting to connect to: {}", &host);
     axum::Server::bind(&host.parse().unwrap())
@@ -92,4 +92,39 @@ async fn insert_particle_count(payload: String) -> Result<Json<ParticleCount>, S
             println!("{} Failed to insert particle data", &request_id);
             e.to_string()
         })
+}
+
+fn get_api_host() -> String {
+    std::env::var("API_HOST").unwrap_or(DEFAULT_HOST.to_string())
+}
+
+#[cfg(test)]
+mod get_api_host_should {
+    use std::sync::Mutex;
+
+    use crate::get_api_host;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn read_return_custom_value() {
+        let _lock = ENV_LOCK.lock().unwrap();
+
+        let value = "127.211.42:3000";
+
+        std::env::set_var("API_HOST", &value);
+        let api_host = get_api_host();
+
+        assert_eq!(api_host, value.to_string());
+    }
+
+    #[test]
+    fn return_default_value() {
+        let _lock = ENV_LOCK.lock().unwrap();
+
+        std::env::remove_var("API_HOST");
+        let api_host = get_api_host();
+
+        assert_eq!(api_host, "0.0.0.0:3000");
+    }
 }
