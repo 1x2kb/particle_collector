@@ -1,10 +1,13 @@
 use axum::{
+    http::request,
     routing::{get, post},
     Json, Router,
 };
 use models::ParticleCount;
 use particles::{establish_connection, insert_particles, query_particles};
 use uuid::Uuid;
+
+const DEFAULT_HOST: &str = "0.0.0.0:3000";
 
 #[tokio::main]
 async fn main() {
@@ -13,9 +16,10 @@ async fn main() {
         .route("/particle", get(get_particle_counts))
         .route("/particle", post(insert_particle_count));
 
-    let connection_string = "0.0.0.0:3000".to_string();
-    println!("Attempting to connect to: {}", &connection_string);
-    axum::Server::bind(&connection_string.parse().unwrap())
+    let host = std::env::var("API_HOST").unwrap_or(DEFAULT_HOST.to_string());
+
+    println!("Attempting to connect to: {}", &host);
+    axum::Server::bind(&host.parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
@@ -51,11 +55,15 @@ async fn get_particle_counts() -> Result<Json<Vec<ParticleCount>>, String> {
 
 async fn insert_particle_count(payload: String) -> Result<Json<ParticleCount>, String> {
     let request_id = Uuid::new_v4();
-    println!("Recieved new insert request, assigning id: {}", request_id);
+    println!(
+        "{} Recieved new insert request, assigning id: {}",
+        &request_id, &request_id
+    );
 
     let new_particle_count = serde_json::from_str(&payload)
         .map(|result| {
             println!("{} Successfully deserialized payload", &request_id);
+            println!("{} Payload: {:#?}", &request_id, &result);
             result
         })
         .map_err(|e| {
@@ -77,6 +85,7 @@ async fn insert_particle_count(payload: String) -> Result<Json<ParticleCount>, S
     insert_particles(&new_particle_count, &mut connection)
         .map(|result| {
             println!("{} Successfully inserted particle data", &request_id);
+            println!("{} Write Result: {:#?}", &request_id, &result);
             Json(result)
         })
         .map_err(|e| {
