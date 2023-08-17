@@ -1,10 +1,16 @@
-use std::error::Error;
+mod control;
+mod message;
+mod particles;
+
 use std::num::ParseIntError;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
+use control::Control;
 use iced::widget::{button, column, row, text, text_input};
 use iced::{executor, Alignment, Application, Command, Element, Settings};
+use message::Message;
 use models::{NewParticleCount, ParticleCount};
+use particles::{NewParticle, ParticleUI};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -17,40 +23,6 @@ impl From<serde_json::Error> for DisplayError {
     fn from(value: serde_json::Error) -> Self {
         Self::Serde(value.to_string())
     }
-}
-
-#[derive(Clone, Debug)]
-enum Control {
-    MicroMeter10(String),
-    MicroMeter60(String),
-    MicroMeter180(String),
-    MicroMeter500(String),
-}
-
-#[derive(Clone, Debug, Default)]
-struct NewParticle {
-    pub micro_meter_10: String,
-    pub micro_meter_60: String,
-    pub micro_meter_180: String,
-    pub micro_meter_500: String,
-}
-
-#[derive(Debug, Clone)]
-struct ParticleUI {
-    new_particle: NewParticle,
-    particles: Vec<ParticleCount>,
-    particle: Option<ParticleCount>,
-    error: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-enum Message {
-    Loading,
-    DisplayData(Vec<ParticleCount>),
-    Submit,
-    SuccessfulWrite(Option<ParticleCount>),
-    TextChanged(Control),
-    Error(Option<DisplayError>),
 }
 
 impl Application for ParticleUI {
