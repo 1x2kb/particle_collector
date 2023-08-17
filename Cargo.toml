@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "particle_collector_api",
     "particle_collector_ui",
     "models",
 ]

@@ -1,33 +1,21 @@
-use std::str::FromStr;
+use std::error::Error;
+use std::num::ParseIntError;
 
+use chrono::{DateTime, Utc};
 use iced::widget::{button, column, row, text, text_input};
 use iced::{executor, Alignment, Application, Command, Element, Settings};
 use models::{NewParticleCount, ParticleCount};
-use reqwest::Client;
-use rust_decimal::Decimal;
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 enum DisplayError {
     Serde(String),
-    Reqwest(String),
-    RustDecimal(String),
-}
-
-impl From<reqwest::Error> for DisplayError {
-    fn from(value: reqwest::Error) -> Self {
-        Self::Reqwest(value.to_string())
-    }
+    NumParseError(String),
 }
 
 impl From<serde_json::Error> for DisplayError {
     fn from(value: serde_json::Error) -> Self {
         Self::Serde(value.to_string())
-    }
-}
-
-impl From<rust_decimal::Error> for DisplayError {
-    fn from(value: rust_decimal::Error) -> Self {
-        Self::RustDecimal(value.to_string())
     }
 }
 
@@ -113,8 +101,7 @@ impl Application for ParticleUI {
                 self.particle = None;
                 self.error = display_error.map(|error| match error {
                     DisplayError::Serde(error) => error,
-                    DisplayError::Reqwest(error) => error,
-                    DisplayError::RustDecimal(error) => error,
+                    DisplayError::NumParseError(error) => error,
                 });
                 Command::none()
             }
@@ -185,17 +172,18 @@ fn begin_loading() -> Command<Message> {
 }
 
 async fn get_data() -> Result<Vec<ParticleCount>, DisplayError> {
-    match reqwest::get("http://localhost:3000/particle").await {
-        Ok(response) => response
-            .text()
-            .await
-            .map_err(|e| DisplayError::Reqwest(e.to_string()))
-            .and_then(|text| {
-                serde_json::from_str::<Vec<ParticleCount>>(&text)
-                    .map_err(|e| DisplayError::Serde(e.to_string()))
-            }),
-        Err(e) => Err(DisplayError::Reqwest(e.to_string())),
-    }
+    Ok(Vec::new())
+    // match reqwest::get("http://localhost:3000/particle").await {
+    //     Ok(response) => response
+    //         .text()
+    //         .await
+    //         .map_err(|e| DisplayError::Reqwest(e.to_string()))
+    //         .and_then(|text| {
+    //             serde_json::from_str::<Vec<ParticleCount>>(&text)
+    //                 .map_err(|e| DisplayError::Serde(e.to_string()))
+    //         }),
+    //     Err(e) => Err(DisplayError::Reqwest(e.to_string())),
+    // }
 }
 
 fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
@@ -218,31 +206,40 @@ async fn write_data(particle_data: NewParticle) -> Result<ParticleCount, Display
 
     let host = std::env::var("API_HOST").unwrap_or("http://localhost:3000".to_string());
 
-    Client::new()
-        .post(format!("{}/particle", host))
-        .body(new_particle)
-        .send()
-        .await
-        .map(|result| {
-            println!("Successfully sent request and received response");
-            result
-        })
-        .map_err(DisplayError::from)?
-        .text()
-        .await
-        .map(|result| {
-            println!("Successfully extracted text from response body");
-            result
-        })
-        .map_err(DisplayError::from)
-        .and_then(|text| {
-            serde_json::from_str(&text)
-                .map(|result| {
-                    println!("Successfully parsed text into particle type");
-                    result
-                })
-                .map_err(DisplayError::from)
-        })
+    Ok(ParticleCount::new(
+        Uuid::new_v4().to_string(),
+        150000u64,
+        25000u64,
+        12500u64,
+        7000u64,
+        Utc::now(),
+    ))
+
+    // Client::new()
+    //     .post(format!("{}/particle", host))
+    //     .body(new_particle)
+    //     .send()
+    //     .await
+    //     .map(|result| {
+    //         println!("Successfully sent request and received response");
+    //         result
+    //     })
+    //     .map_err(DisplayError::from)?
+    //     .text()
+    //     .await
+    //     .map(|result| {
+    //         println!("Successfully extracted text from response body");
+    //         result
+    //     })
+    //     .map_err(DisplayError::from)
+    //     .and_then(|text| {
+    //         serde_json::from_str(&text)
+    //             .map(|result| {
+    //                 println!("Successfully parsed text into particle type");
+    //                 result
+    //             })
+    //             .map_err(DisplayError::from)
+    //     })
 }
 
 fn to_new_particle_counts(new_particle: &NewParticle) -> Result<NewParticleCount, DisplayError> {
@@ -253,15 +250,15 @@ fn to_new_particle_counts(new_particle: &NewParticle) -> Result<NewParticleCount
         new_particle.micro_meter_500.as_str(),
     ]
     .into_iter()
-    .map(Decimal::from_str)
-    .collect::<Result<Vec<Decimal>, rust_decimal::Error>>()
+    .map(|value| value.parse::<u64>())
+    .collect::<Result<Vec<u64>, ParseIntError>>()
     .map(|values| NewParticleCount {
         micro_meter_10: values[0],
         micro_meter_60: values[1],
         micro_meter_180: values[2],
         micro_meter_500: values[3],
     })
-    .map_err(|error| DisplayError::RustDecimal(error.to_string()))
+    .map_err(|error| DisplayError::NumParseError(error.to_string()))
 }
 
 pub fn main() -> iced::Result {

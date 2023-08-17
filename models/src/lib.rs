@@ -1,30 +1,24 @@
-pub mod schema;
-
 use chrono::prelude::*;
-use diesel::{Insertable, Queryable, Selectable};
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Insertable, Default, Debug, Clone)]
-#[diesel(table_name = crate::schema::particles)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
+#[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct NewParticleCount {
     #[serde(alias = "mircoMeter10")]
-    pub micro_meter_10: Decimal,
+    pub micro_meter_10: u64,
     #[serde(alias = "mircoMeter60")]
-    pub micro_meter_60: Decimal,
+    pub micro_meter_60: u64,
     #[serde(alias = "mircoMeter180")]
-    pub micro_meter_180: Decimal,
+    pub micro_meter_180: u64,
     #[serde(alias = "mircoMeter500")]
-    pub micro_meter_500: Decimal,
+    pub micro_meter_500: u64,
 }
 
 impl NewParticleCount {
     pub fn new(
-        micro_meter_10: Decimal,
-        micro_meter_60: Decimal,
-        micro_meter_180: Decimal,
-        micro_meter_500: Decimal,
+        micro_meter_10: u64,
+        micro_meter_60: u64,
+        micro_meter_180: u64,
+        micro_meter_500: u64,
     ) -> Self {
         Self {
             micro_meter_10,
@@ -35,13 +29,32 @@ impl NewParticleCount {
     }
 }
 
-#[derive(Serialize, Deserialize, Queryable, Selectable, Debug, Clone)]
-#[diesel(table_name = crate::schema::particles)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ParticleCount {
-    id: i32,
-    micro_meter_10: Decimal,
-    micro_meter_60: Decimal,
-    micro_meter_180: Decimal,
-    micro_meter_500: Decimal,
-    insert_time: DateTime<Utc>,
+    id: String,
+    micro_meter_10: u64,
+    micro_meter_60: u64,
+    micro_meter_180: u64,
+    micro_meter_500: u64,
+    time: DateTime<Utc>,
+}
+
+impl ParticleCount {
+    pub fn new(
+        id: String,
+        mm10: u64,
+        mm60: u64,
+        mm180: u64,
+        mm500: u64,
+        time: DateTime<Utc>,
+    ) -> Self {
+        Self {
+            id,
+            micro_meter_10: mm10,
+            micro_meter_60: mm60,
+            micro_meter_180: mm180,
+            micro_meter_500: mm500,
+            time,
+        }
+    }
 }
