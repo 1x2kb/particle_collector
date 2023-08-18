@@ -9,21 +9,9 @@ use control::Control;
 use iced::widget::{button, column, row, text, text_input};
 use iced::{executor, Alignment, Application, Command, Element, Settings};
 use message::Message;
-use models::{NewParticleCount, ParticleCount};
+use models::{DisplayError, NewParticleCount, ParticleCount};
 use particles::{NewParticle, ParticleUI};
 use uuid::Uuid;
-
-#[derive(Debug, Clone)]
-enum DisplayError {
-    Serde(String),
-    NumParseError(String),
-}
-
-impl From<serde_json::Error> for DisplayError {
-    fn from(value: serde_json::Error) -> Self {
-        Self::Serde(value.to_string())
-    }
-}
 
 impl Application for ParticleUI {
     type Message = Message;
@@ -74,6 +62,8 @@ impl Application for ParticleUI {
                 self.error = display_error.map(|error| match error {
                     DisplayError::Serde(error) => error,
                     DisplayError::NumParseError(error) => error,
+                    DisplayError::FileReadError(_) => todo!(),
+                    DisplayError::U8parseError(_) => todo!(),
                 });
                 Command::none()
             }
@@ -171,12 +161,6 @@ fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
 async fn write_data(particle_data: NewParticle) -> Result<ParticleCount, DisplayError> {
     let new_particle = to_new_particle_counts(&particle_data)?;
     println!("Successfully converted input into particle type");
-    let new_particle = serde_json::to_string(&new_particle)
-        .map_err(|e| e.to_string())
-        .map_err(DisplayError::Serde)?;
-    println!("Successfully serialized particle type into string");
-
-    let host = std::env::var("API_HOST").unwrap_or("http://localhost:3000".to_string());
 
     Ok(ParticleCount::new(
         Uuid::new_v4().to_string(),

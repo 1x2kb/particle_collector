@@ -58,3 +58,11 @@ impl ParticleCount {
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum DisplayError {
+    Serde(String),
+    NumParseError(String),
+    FileReadError(String),
+    U8parseError(String),
+}

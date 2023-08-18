@@ -2,6 +2,7 @@
 members = [
     "particle_collector_ui",
     "models",
+    "file_reader"
 ]
 
 resolver = "2"

@@ -617,6 +617,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "file_reader"
+version = "0.1.0"
+dependencies = [
+ "models",
+]
+
+[[package]]
 name = "find-crate"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
