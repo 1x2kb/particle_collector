@@ -1,6 +1,10 @@
-use std::{fs, path::Path};
+use std::{
+    fs::{self, File},
+    path::Path,
+};
 
-use models::DisplayError;
+use csv::ReaderBuilder;
+use models::{DisplayError, ParticleCount};
 
 pub fn read_file(path: impl AsRef<Path>) -> Result<String, DisplayError> {
     fs::read(path)
@@ -13,6 +17,20 @@ pub fn read_file(path: impl AsRef<Path>) -> Result<String, DisplayError> {
 pub fn does_file_exist(path: impl AsRef<Path>) -> bool {
     // Canonicalize fails when the path does not point to anything. Use this fact to map to bool
     fs::canonicalize(path).map(|_| true).unwrap_or(false)
+}
+
+pub fn parse_data(path: impl AsRef<Path>) -> Result<Vec<ParticleCount>, DisplayError> {
+    File::open(path)
+        .map_err(|e| DisplayError::FileReadError(e.to_string()))
+        .and_then(|file| {
+            ReaderBuilder::new()
+                .flexible(true)
+                .from_reader(file)
+                .deserialize()
+                .into_iter()
+                .map(|record| record.map_err(|e| DisplayError::Serde(e.to_string())))
+                .collect::<Result<Vec<ParticleCount>, DisplayError>>()
+        })
 }
 
 #[cfg(test)]

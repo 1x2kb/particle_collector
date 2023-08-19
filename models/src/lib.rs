@@ -29,7 +29,7 @@ impl NewParticleCount {
     }
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ParticleCount {
     id: String,
     micro_meter_10: u64,
