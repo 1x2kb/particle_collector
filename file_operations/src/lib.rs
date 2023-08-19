@@ -27,7 +27,6 @@ pub fn parse_data(path: impl AsRef<Path>) -> Result<Vec<ParticleCount>, DisplayE
                 .flexible(true)
                 .from_reader(file)
                 .deserialize()
-                .into_iter()
                 .map(|record| record.map_err(|e| DisplayError::Serde(e.to_string())))
                 .collect::<Result<Vec<ParticleCount>, DisplayError>>()
         })
@@ -47,7 +46,7 @@ mod tests {
             let first_line = string.lines().next().unwrap().trim();
             assert_eq!(
                 first_line,
-                "id,micro_meter_10,micro_meter_60,micro_meter_180,micro_meter_500"
+                "id,micro_meter_10,micro_meter_60,micro_meter_180,micro_meter_500,time"
             );
         }
 
@@ -84,6 +83,35 @@ mod tests {
             let exists = does_file_exist("data/some_nonsense.csv");
 
             assert!(!exists, "File did exist and shouldn't");
+        }
+    }
+
+    #[cfg(test)]
+    mod parse_data_should {
+        use chrono::{DateTime, Utc};
+        use models::ParticleCount;
+
+        use crate::parse_data;
+
+        #[test]
+        fn parse_data_in_test_file() {
+            println!("{}", Utc::now());
+            let path = "data/test.csv";
+
+            let particle_counts = parse_data(path).unwrap();
+            assert_eq!(
+                particle_counts,
+                vec![ParticleCount::new(
+                    "ba31bb3c-cf22-4635-88e6-1e12b5cceae0".to_string(),
+                    50000,
+                    25000,
+                    10000,
+                    4000,
+                    "2023-08-19T22:32:49.582287501Z"
+                        .parse::<DateTime<Utc>>()
+                        .unwrap()
+                )]
+            );
         }
     }
 }

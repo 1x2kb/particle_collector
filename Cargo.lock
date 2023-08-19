@@ -641,8 +641,10 @@ dependencies = [
 name = "file_operations"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "csv",
  "models",
+ "uuid",
 ]
 
 [[package]]
@@ -1706,6 +1708,7 @@ name = "particle_collector_ui"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "file_operations",
  "iced",
  "models",
  "serde_json",

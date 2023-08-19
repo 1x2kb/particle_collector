@@ -10,3 +10,4 @@ models = {path = "../models"}
 serde_json = "1.0.99"
 chrono = "0.4.26"
 uuid = { version = "1.4.1", features = ["v4"] }
+file_operations = {path = "../file_operations"}

@@ -4,7 +4,7 @@ use crate::{control::Control, DisplayError};
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Loading,
+    _Loading,
     DisplayData(Vec<ParticleCount>),
     Submit,
     SuccessfulWrite(Option<ParticleCount>),

@@ -1,7 +1,7 @@
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Default, Debug, Clone)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq)]
 pub struct NewParticleCount {
     #[serde(alias = "mircoMeter10")]
     pub micro_meter_10: u64,
@@ -29,7 +29,7 @@ impl NewParticleCount {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ParticleCount {
     id: String,
     micro_meter_10: u64,

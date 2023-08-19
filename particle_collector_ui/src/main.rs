@@ -36,7 +36,7 @@ impl Application for ParticleUI {
 
     fn update(&mut self, message: Message) -> iced::Command<Message> {
         match message {
-            Message::Loading => begin_loading(),
+            Message::_Loading => begin_loading(),
             Message::DisplayData(particles) => {
                 self.particles = particles;
                 Command::none()
@@ -125,7 +125,6 @@ impl Default for ParticleUI {
     }
 }
 
-// TODO: make async
 fn begin_loading() -> Command<Message> {
     Command::perform(get_data(), |data| match data {
         Ok(d) => Message::DisplayData(d),
@@ -134,18 +133,7 @@ fn begin_loading() -> Command<Message> {
 }
 
 async fn get_data() -> Result<Vec<ParticleCount>, DisplayError> {
-    Ok(Vec::new())
-    // match reqwest::get("http://localhost:3000/particle").await {
-    //     Ok(response) => response
-    //         .text()
-    //         .await
-    //         .map_err(|e| DisplayError::Reqwest(e.to_string()))
-    //         .and_then(|text| {
-    //             serde_json::from_str::<Vec<ParticleCount>>(&text)
-    //                 .map_err(|e| DisplayError::Serde(e.to_string()))
-    //         }),
-    //     Err(e) => Err(DisplayError::Reqwest(e.to_string())),
-    // }
+    file_operations::parse_data("./data/data.csv")
 }
 
 fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
@@ -159,7 +147,7 @@ fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
 }
 
 async fn write_data(particle_data: NewParticle) -> Result<ParticleCount, DisplayError> {
-    let new_particle = to_new_particle_counts(&particle_data)?;
+    let _new_particle = to_new_particle_counts(&particle_data)?;
     println!("Successfully converted input into particle type");
 
     Ok(ParticleCount::new(
