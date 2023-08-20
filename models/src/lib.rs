@@ -1,15 +1,16 @@
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+pub trait CsvWrite {
+    fn write_form(&self) -> String;
+}
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq)]
 pub struct NewParticleCount {
-    #[serde(alias = "mircoMeter10")]
     pub micro_meter_10: u64,
-    #[serde(alias = "mircoMeter60")]
     pub micro_meter_60: u64,
-    #[serde(alias = "mircoMeter180")]
     pub micro_meter_180: u64,
-    #[serde(alias = "mircoMeter500")]
     pub micro_meter_500: u64,
 }
 
@@ -59,10 +60,38 @@ impl ParticleCount {
     }
 }
 
+impl From<NewParticleCount> for ParticleCount {
+    fn from(value: NewParticleCount) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            micro_meter_10: value.micro_meter_10,
+            micro_meter_60: value.micro_meter_60,
+            micro_meter_180: value.micro_meter_180,
+            micro_meter_500: value.micro_meter_500,
+            time: Utc::now(),
+        }
+    }
+}
+
+impl CsvWrite for ParticleCount {
+    fn write_form(&self) -> String {
+        format!(
+            "{},{},{},{},{},{}",
+            &self.id,
+            &self.micro_meter_10,
+            &self.micro_meter_60,
+            &self.micro_meter_180,
+            &self.micro_meter_500,
+            &self.time
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum DisplayError {
     Serde(String),
     NumParseError(String),
     FileReadError(String),
     U8parseError(String),
+    WriteError(String),
 }

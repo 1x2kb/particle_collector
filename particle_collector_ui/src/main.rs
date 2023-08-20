@@ -64,6 +64,7 @@ impl Application for ParticleUI {
                     DisplayError::NumParseError(error) => error,
                     DisplayError::FileReadError(_) => todo!(),
                     DisplayError::U8parseError(_) => todo!(),
+                    DisplayError::WriteError(_) => todo!(),
                 });
                 Command::none()
             }
