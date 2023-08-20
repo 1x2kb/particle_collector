@@ -5,7 +5,7 @@ use std::{
 };
 
 use csv::ReaderBuilder;
-use models::{CsvWrite, DisplayError, NewParticleCount, ParticleCount};
+use models::{CsvWrite, DisplayError, ParticleCount};
 
 pub fn read_file(path: impl AsRef<Path>) -> Result<String, DisplayError> {
     fs::read(path)
@@ -170,7 +170,7 @@ mod tests {
             let particle_count =
                 ParticleCount::new(Uuid::new_v4().to_string(), 5, 4, 3, 2, Utc::now());
 
-            let result = write_data(&new_path, particle_count.clone()).unwrap();
+            write_data(&new_path, particle_count.clone()).unwrap();
 
             let particle_counts = parse_data(&new_path).unwrap();
             let found = particle_counts
