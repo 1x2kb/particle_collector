@@ -2,13 +2,11 @@ mod control;
 mod message;
 mod particles;
 
-use std::num::ParseIntError;
-
 use control::Control;
 use iced::widget::{button, column, row, text, text_input};
 use iced::{executor, Alignment, Application, Command, Element, Settings};
 use message::Message;
-use models::{DisplayError, NewParticleCount, ParticleCount};
+use models::{DisplayError, ParticleCount};
 use particles::{NewParticle, ParticleUI};
 
 impl Application for ParticleUI {
@@ -147,42 +145,12 @@ fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
 }
 
 async fn write_data(particle_data: NewParticle) -> Result<ParticleCount, DisplayError> {
-    let _new_particle = to_new_particle_counts(&particle_data)?;
-    println!("Successfully converted input into particle type");
-
-    // Ok(ParticleCount::new(
-    //     Uuid::new_v4().to_string(),
-    //     150000u64,
-    //     25000u64,
-    //     12500u64,
-    //     7000u64,
-    //     Utc::now(),
-    // ))
-
     let particle_count: Result<ParticleCount, DisplayError> = particle_data.into();
 
     particle_count.and_then(|particle_data| {
-        file_operations::write_data("", &particle_data).map(|_| particle_data)
+        println!("Successfully converted input into particle type");
+        file_operations::write_data("data/test.csv", &particle_data).map(|_| particle_data)
     })
-}
-
-fn to_new_particle_counts(new_particle: &NewParticle) -> Result<NewParticleCount, DisplayError> {
-    [
-        new_particle.micro_meter_10.as_str(),
-        new_particle.micro_meter_60.as_str(),
-        new_particle.micro_meter_180.as_str(),
-        new_particle.micro_meter_500.as_str(),
-    ]
-    .into_iter()
-    .map(|value| value.parse::<u64>())
-    .collect::<Result<Vec<u64>, ParseIntError>>()
-    .map(|values| NewParticleCount {
-        micro_meter_10: values[0],
-        micro_meter_60: values[1],
-        micro_meter_180: values[2],
-        micro_meter_500: values[3],
-    })
-    .map_err(|error| DisplayError::NumParseError(error.to_string()))
 }
 
 pub fn main() -> iced::Result {

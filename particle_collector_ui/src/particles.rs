@@ -10,23 +10,21 @@ pub struct NewParticle {
     pub micro_meter_500: String,
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<Result<ParticleCount, DisplayError>> for NewParticle {
     fn into(self) -> Result<ParticleCount, DisplayError> {
         vec![
-            self.micro_meter_10
-                .parse::<u64>()
-                .map_err(|e| DisplayError::ConvertToU64Error(e.to_string())),
-            self.micro_meter_60
-                .parse::<u64>()
-                .map_err(|e| DisplayError::ConvertToU64Error(e.to_string())),
-            self.micro_meter_180
-                .parse::<u64>()
-                .map_err(|e| DisplayError::ConvertToU64Error(e.to_string())),
-            self.micro_meter_500
-                .parse::<u64>()
-                .map_err(|e| DisplayError::ConvertToU64Error(e.to_string())),
+            self.micro_meter_10,
+            self.micro_meter_60,
+            self.micro_meter_180,
+            self.micro_meter_500,
         ]
         .into_iter()
+        .map(|micro_meter| {
+            micro_meter
+                .parse::<u64>()
+                .map_err(|e| DisplayError::ConvertToU64Error(e.to_string()))
+        })
         .collect::<Result<Vec<u64>, DisplayError>>()
         .map(|vec| {
             ParticleCount::new(

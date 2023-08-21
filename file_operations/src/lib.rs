@@ -171,7 +171,6 @@ mod tests {
             let mut random_generator = rand::thread_rng();
 
             let randoms = (0..4)
-                .into_iter()
                 .map(|_| random_generator.gen_range(10000..275000))
                 .collect::<Vec<u64>>();
 
