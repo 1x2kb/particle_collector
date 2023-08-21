@@ -137,6 +137,7 @@ mod tests {
 
         use chrono::Utc;
         use models::ParticleCount;
+        use rand::Rng;
         use uuid::Uuid;
 
         use crate::{parse_data, write_data};
@@ -166,9 +167,21 @@ mod tests {
         #[ignore = "Creates and deletes a file, not meant to be run every change"]
         fn append_file() {
             let new_path = copy_data_file(DATA_PATH);
+            let mut random_generator = rand::thread_rng();
 
-            let particle_count =
-                ParticleCount::new(Uuid::new_v4().to_string(), 5, 4, 3, 2, Utc::now());
+            let randoms = (0..4)
+                .into_iter()
+                .map(|_| random_generator.gen_range(10000..275000))
+                .collect::<Vec<u64>>();
+
+            let particle_count = ParticleCount::new(
+                Uuid::new_v4().to_string(),
+                randoms[0],
+                randoms[1],
+                randoms[2],
+                randoms[3],
+                Utc::now(),
+            );
 
             write_data(&new_path, particle_count.clone()).unwrap();
 

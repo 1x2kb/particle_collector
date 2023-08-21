@@ -644,6 +644,7 @@ dependencies = [
  "chrono",
  "csv",
  "models",
+ "rand",
  "uuid",
 ]
 
