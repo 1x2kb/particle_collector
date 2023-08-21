@@ -4,14 +4,12 @@ mod particles;
 
 use std::num::ParseIntError;
 
-use chrono::Utc;
 use control::Control;
 use iced::widget::{button, column, row, text, text_input};
 use iced::{executor, Alignment, Application, Command, Element, Settings};
 use message::Message;
 use models::{DisplayError, NewParticleCount, ParticleCount};
 use particles::{NewParticle, ParticleUI};
-use uuid::Uuid;
 
 impl Application for ParticleUI {
     type Message = Message;
@@ -62,9 +60,10 @@ impl Application for ParticleUI {
                 self.error = display_error.map(|error| match error {
                     DisplayError::Serde(error) => error,
                     DisplayError::NumParseError(error) => error,
-                    DisplayError::FileReadError(_) => todo!(),
-                    DisplayError::U8parseError(_) => todo!(),
-                    DisplayError::WriteError(_) => todo!(),
+                    DisplayError::FileReadError(e) => e,
+                    DisplayError::U8parseError(e) => e,
+                    DisplayError::WriteError(e) => e,
+                    DisplayError::ConvertToU64Error(e) => e,
                 });
                 Command::none()
             }
@@ -151,40 +150,20 @@ async fn write_data(particle_data: NewParticle) -> Result<ParticleCount, Display
     let _new_particle = to_new_particle_counts(&particle_data)?;
     println!("Successfully converted input into particle type");
 
-    Ok(ParticleCount::new(
-        Uuid::new_v4().to_string(),
-        150000u64,
-        25000u64,
-        12500u64,
-        7000u64,
-        Utc::now(),
-    ))
+    // Ok(ParticleCount::new(
+    //     Uuid::new_v4().to_string(),
+    //     150000u64,
+    //     25000u64,
+    //     12500u64,
+    //     7000u64,
+    //     Utc::now(),
+    // ))
 
-    // Client::new()
-    //     .post(format!("{}/particle", host))
-    //     .body(new_particle)
-    //     .send()
-    //     .await
-    //     .map(|result| {
-    //         println!("Successfully sent request and received response");
-    //         result
-    //     })
-    //     .map_err(DisplayError::from)?
-    //     .text()
-    //     .await
-    //     .map(|result| {
-    //         println!("Successfully extracted text from response body");
-    //         result
-    //     })
-    //     .map_err(DisplayError::from)
-    //     .and_then(|text| {
-    //         serde_json::from_str(&text)
-    //             .map(|result| {
-    //                 println!("Successfully parsed text into particle type");
-    //                 result
-    //             })
-    //             .map_err(DisplayError::from)
-    //     })
+    let particle_count: Result<ParticleCount, DisplayError> = particle_data.into();
+
+    particle_count.and_then(|particle_data| {
+        file_operations::write_data("", &particle_data).map(|_| particle_data)
+    })
 }
 
 fn to_new_particle_counts(new_particle: &NewParticle) -> Result<NewParticleCount, DisplayError> {

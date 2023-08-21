@@ -33,7 +33,7 @@ pub fn parse_data(path: impl AsRef<Path>) -> Result<Vec<ParticleCount>, DisplayE
         })
 }
 
-pub fn write_data(path: impl AsRef<Path>, data: ParticleCount) -> Result<(), DisplayError> {
+pub fn write_data(path: impl AsRef<Path>, data: &ParticleCount) -> Result<(), DisplayError> {
     let mut file = OpenOptions::new()
         .append(true)
         .open(path)
@@ -75,6 +75,7 @@ mod tests {
                 models::DisplayError::FileReadError(_) => (),
                 models::DisplayError::U8parseError(_) => unreachable!(),
                 models::DisplayError::WriteError(_) => unreachable!(),
+                models::DisplayError::ConvertToU64Error(_) => unreachable!(),
             }
         }
     }
@@ -183,7 +184,7 @@ mod tests {
                 Utc::now(),
             );
 
-            write_data(&new_path, particle_count.clone()).unwrap();
+            write_data(&new_path, &particle_count).unwrap();
 
             let particle_counts = parse_data(&new_path).unwrap();
             let found = particle_counts

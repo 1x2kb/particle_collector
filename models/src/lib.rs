@@ -93,5 +93,6 @@ pub enum DisplayError {
     NumParseError(String),
     FileReadError(String),
     U8parseError(String),
+    ConvertToU64Error(String),
     WriteError(String),
 }
