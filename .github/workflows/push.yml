@@ -21,6 +21,15 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Build
         run: cargo build --workspace
+  
+  arm_build:
+    name: Build ARM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Build
+        run: cross build --release -p particle_collector_ui --target=aarch64-unknown-linux-gnu
  
   # Check formatting with rustfmt
   formatting:
