@@ -1,69 +1,13 @@
-use std::str::FromStr;
+mod control;
+mod message;
+mod particles;
 
+use control::Control;
 use iced::widget::{button, column, row, text, text_input};
 use iced::{executor, Alignment, Application, Command, Element, Settings};
-use models::{NewParticleCount, ParticleCount};
-use reqwest::Client;
-use rust_decimal::Decimal;
-
-#[derive(Debug, Clone)]
-enum DisplayError {
-    Serde(String),
-    Reqwest(String),
-    RustDecimal(String),
-}
-
-impl From<reqwest::Error> for DisplayError {
-    fn from(value: reqwest::Error) -> Self {
-        Self::Reqwest(value.to_string())
-    }
-}
-
-impl From<serde_json::Error> for DisplayError {
-    fn from(value: serde_json::Error) -> Self {
-        Self::Serde(value.to_string())
-    }
-}
-
-impl From<rust_decimal::Error> for DisplayError {
-    fn from(value: rust_decimal::Error) -> Self {
-        Self::RustDecimal(value.to_string())
-    }
-}
-
-#[derive(Clone, Debug)]
-enum Control {
-    MicroMeter10(String),
-    MicroMeter60(String),
-    MicroMeter180(String),
-    MicroMeter500(String),
-}
-
-#[derive(Clone, Debug, Default)]
-struct NewParticle {
-    pub micro_meter_10: String,
-    pub micro_meter_60: String,
-    pub micro_meter_180: String,
-    pub micro_meter_500: String,
-}
-
-#[derive(Debug, Clone)]
-struct ParticleUI {
-    new_particle: NewParticle,
-    particles: Vec<ParticleCount>,
-    particle: Option<ParticleCount>,
-    error: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-enum Message {
-    Loading,
-    DisplayData(Vec<ParticleCount>),
-    Submit,
-    SuccessfulWrite(Option<ParticleCount>),
-    TextChanged(Control),
-    Error(Option<DisplayError>),
-}
+use message::Message;
+use models::{DisplayError, ParticleCount};
+use particles::{NewParticle, ParticleUI};
 
 impl Application for ParticleUI {
     type Message = Message;
@@ -88,7 +32,7 @@ impl Application for ParticleUI {
 
     fn update(&mut self, message: Message) -> iced::Command<Message> {
         match message {
-            Message::Loading => begin_loading(),
+            Message::_Loading => begin_loading(),
             Message::DisplayData(particles) => {
                 self.particles = particles;
                 Command::none()
@@ -113,8 +57,11 @@ impl Application for ParticleUI {
                 self.particle = None;
                 self.error = display_error.map(|error| match error {
                     DisplayError::Serde(error) => error,
-                    DisplayError::Reqwest(error) => error,
-                    DisplayError::RustDecimal(error) => error,
+                    DisplayError::NumParseError(error) => error,
+                    DisplayError::FileReadError(e) => e,
+                    DisplayError::U8parseError(e) => e,
+                    DisplayError::WriteError(e) => e,
+                    DisplayError::ConvertToU64Error(e) => e,
                 });
                 Command::none()
             }
@@ -176,7 +123,6 @@ impl Default for ParticleUI {
     }
 }
 
-// TODO: make async
 fn begin_loading() -> Command<Message> {
     Command::perform(get_data(), |data| match data {
         Ok(d) => Message::DisplayData(d),
@@ -185,17 +131,7 @@ fn begin_loading() -> Command<Message> {
 }
 
 async fn get_data() -> Result<Vec<ParticleCount>, DisplayError> {
-    match reqwest::get("http://localhost:3000/particle").await {
-        Ok(response) => response
-            .text()
-            .await
-            .map_err(|e| DisplayError::Reqwest(e.to_string()))
-            .and_then(|text| {
-                serde_json::from_str::<Vec<ParticleCount>>(&text)
-                    .map_err(|e| DisplayError::Serde(e.to_string()))
-            }),
-        Err(e) => Err(DisplayError::Reqwest(e.to_string())),
-    }
+    file_operations::parse_data("./data/data.csv")
 }
 
 fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
@@ -209,59 +145,12 @@ fn handle_submit(new_particle: &NewParticle) -> Command<Message> {
 }
 
 async fn write_data(particle_data: NewParticle) -> Result<ParticleCount, DisplayError> {
-    let new_particle = to_new_particle_counts(&particle_data)?;
-    println!("Successfully converted input into particle type");
-    let new_particle = serde_json::to_string(&new_particle)
-        .map_err(|e| e.to_string())
-        .map_err(DisplayError::Serde)?;
-    println!("Successfully serialized particle type into string");
+    let particle_count: Result<ParticleCount, DisplayError> = particle_data.into();
 
-    let host = std::env::var("API_HOST").unwrap_or("http://localhost:3000".to_string());
-
-    Client::new()
-        .post(format!("{}/particle", host))
-        .body(new_particle)
-        .send()
-        .await
-        .map(|result| {
-            println!("Successfully sent request and received response");
-            result
-        })
-        .map_err(DisplayError::from)?
-        .text()
-        .await
-        .map(|result| {
-            println!("Successfully extracted text from response body");
-            result
-        })
-        .map_err(DisplayError::from)
-        .and_then(|text| {
-            serde_json::from_str(&text)
-                .map(|result| {
-                    println!("Successfully parsed text into particle type");
-                    result
-                })
-                .map_err(DisplayError::from)
-        })
-}
-
-fn to_new_particle_counts(new_particle: &NewParticle) -> Result<NewParticleCount, DisplayError> {
-    [
-        new_particle.micro_meter_10.as_str(),
-        new_particle.micro_meter_60.as_str(),
-        new_particle.micro_meter_180.as_str(),
-        new_particle.micro_meter_500.as_str(),
-    ]
-    .into_iter()
-    .map(Decimal::from_str)
-    .collect::<Result<Vec<Decimal>, rust_decimal::Error>>()
-    .map(|values| NewParticleCount {
-        micro_meter_10: values[0],
-        micro_meter_60: values[1],
-        micro_meter_180: values[2],
-        micro_meter_500: values[3],
+    particle_count.and_then(|particle_data| {
+        println!("Successfully converted input into particle type");
+        file_operations::write_data("data/test.csv", &particle_data).map(|_| particle_data)
     })
-    .map_err(|error| DisplayError::RustDecimal(error.to_string()))
 }
 
 pub fn main() -> iced::Result {
